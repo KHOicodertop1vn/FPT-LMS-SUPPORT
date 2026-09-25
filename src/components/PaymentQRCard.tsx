@@ -32,6 +32,8 @@ interface PaymentQRCardProps {
   onSimulatePayOS?: () => void;
   isSimulatingPayOS?: boolean;
   isPolling?: boolean;
+  selectedPlanTitle?: string;
+  onChangePlan?: () => void;
 }
 
 export const PaymentQRCard: React.FC<PaymentQRCardProps> = ({
@@ -42,6 +44,8 @@ export const PaymentQRCard: React.FC<PaymentQRCardProps> = ({
   onSimulatePayOS,
   isSimulatingPayOS = false,
   isPolling = false,
+  selectedPlanTitle,
+  onChangePlan,
 }) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [qrLoaded, setQrLoaded] = useState(false);
@@ -146,18 +150,16 @@ export const PaymentQRCard: React.FC<PaymentQRCardProps> = ({
         </div>
 
         {/* Nút gia hạn trước hạn */}
-        <div className="pt-6 mt-6 border-t border-slate-100">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>Bạn muốn gia hạn thêm chu kỳ 30 ngày?</span>
+        <div className="pt-6 mt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-xs text-slate-500">Bạn muốn gia hạn thêm hoặc nâng cấp gói năm?</span>
+          {onChangePlan && (
             <button
-              onClick={() => {
-                alert('Mã VietQR gia hạn sớm đã sẵn sàng! Bạn có thể chuyển khoản với cùng cú pháp payCode.');
-              }}
-              className="text-orange-600 hover:text-orange-700 font-bold hover:underline"
+              onClick={onChangePlan}
+              className="px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-bold transition-colors cursor-pointer"
             >
-              Gia hạn trước hạn
+              Nâng cấp / Đổi gói cước &rarr;
             </button>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -192,6 +194,32 @@ export const PaymentQRCard: React.FC<PaymentQRCardProps> = ({
             <AlertTriangle className="w-3.5 h-3.5" />
             {license.status === 'Trial' ? 'Cần gia hạn trước khi hết hạn' : 'Đã hết hạn - Cần thanh toán'}
           </span>
+        </div>
+
+        {/* Banner gói dịch vụ đã chọn & Nút đổi gói cước */}
+        <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-orange-600 text-white flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-xs">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs text-orange-950 font-bold">
+                {selectedPlanTitle || (bankInfo.amount === 90000 ? 'Gói Năm (365 ngày)' : 'Gói Tháng (30 ngày)')}
+              </div>
+              <div className="text-[11px] text-orange-800">
+                Số tiền thanh toán: <strong className="font-mono text-orange-950 font-black">{(bankInfo.amount || 10000).toLocaleString('vi-VN')} VNĐ</strong>
+              </div>
+            </div>
+          </div>
+          {onChangePlan && (
+            <button
+              type="button"
+              onClick={onChangePlan}
+              className="text-xs font-bold text-orange-700 hover:text-orange-900 bg-white hover:bg-orange-100 px-3 py-1.5 rounded-xl border border-orange-300 shadow-xs transition-colors flex items-center gap-1 cursor-pointer flex-shrink-0"
+            >
+              <span>← Đổi gói cước khác</span>
+            </button>
+          )}
         </div>
 
         {/* Nội dung thanh toán 2 khối: Ảnh VietQR & Thông tin chuyển khoản */}

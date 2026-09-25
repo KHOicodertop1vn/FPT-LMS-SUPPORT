@@ -25,6 +25,7 @@ interface StudentInfoCardProps {
   isLoading: boolean;
   onRefresh: () => void;
   onManualStatusChange?: (status: LicenseStatus, days: number) => void;
+  onUpgradeClick?: () => void;
 }
 
 export const StudentInfoCard: React.FC<StudentInfoCardProps> = ({
@@ -33,6 +34,7 @@ export const StudentInfoCard: React.FC<StudentInfoCardProps> = ({
   isLoading,
   onRefresh,
   onManualStatusChange,
+  onUpgradeClick,
 }) => {
   /**
    * Cấu hình hiển thị màu sắc và biểu tượng theo trạng thái bản quyền:
@@ -251,6 +253,18 @@ export const StudentInfoCard: React.FC<StudentInfoCardProps> = ({
 
       {/* Phần 4: Nút "Tải lại trạng thái" (Refresh) & Bộ chuyển đổi kiểm thử */}
       <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
+        {/* Nút Xem gói đăng ký / Nâng cấp */}
+        {onUpgradeClick && (
+          <button
+            type="button"
+            onClick={onUpgradeClick}
+            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-700 hover:to-amber-700 active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-orange-600/20 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>Xem bảng giá & Đăng ký gói (10k / 90k)</span>
+          </button>
+        )}
+
         {/* ========================================================================= */}
         {/* Nút "Tải lại trạng thái" (Refresh) theo Yêu cầu 4 */}
         {/* ========================================================================= */}
@@ -258,7 +272,7 @@ export const StudentInfoCard: React.FC<StudentInfoCardProps> = ({
           type="button"
           onClick={onRefresh}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-bold text-sm shadow-md transition-all disabled:opacity-60 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2.5 px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-bold text-xs shadow-sm transition-all disabled:opacity-60 cursor-pointer"
         >
           <RefreshCw
             className={`w-4 h-4 text-orange-400 ${isLoading ? 'animate-spin' : ''}`}

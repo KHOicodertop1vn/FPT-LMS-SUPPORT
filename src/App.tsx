@@ -8,13 +8,16 @@ import { Navbar } from './components/Navbar';
 import { LoginView } from './components/LoginView';
 import { StudentInfoCard } from './components/StudentInfoCard';
 import { PaymentQRCard } from './components/PaymentQRCard';
+import { PaymentModal } from './components/PaymentModal';
+import { StudentInfoView } from './components/StudentInfoView';
+import { PlansSelectionView, PlanType } from './components/PlansSelectionView';
 import { BankConfigModal } from './components/BankConfigModal';
 import { BackendCodeModal } from './components/BackendCodeModal';
 import { AlertToast, ToastMessage } from './components/AlertToast';
 import { UserProfile, LicenseResponse, LicenseStatus, BankInfo } from './types';
 import { decodeJwtResponse, isFptEmail, isValidEmail } from './utils/jwt';
 import { VIETQR_CONFIG, DEFAULT_BACKEND_API, DEFAULT_GOOGLE_CLIENT_ID } from './config/paymentConfig';
-import { AlertCircle, ServerOff, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { AlertCircle, ServerOff, CheckCircle2, ShieldAlert, Sparkles, CreditCard, User, Layers, ArrowLeft } from 'lucide-react';
 
 export default function App() {
   // =========================================================================
@@ -36,13 +39,22 @@ export default function App() {
   });
 
   // =========================================================================
+  // 1.1 TÁCH RỜI TRANG & MODAL THANH TOÁN THEO YÊU CẦU
+  // - activeTab: 'plans' (Gói thành viên) | 'student' (Thông tin sinh viên & Giấy phép)
+  // - isPaymentModalOpen: modal thanh toán VietQR nổi lên với background mờ và đếm ngược phiên
+  // =========================================================================
+  const [activeTab, setActiveTab] = useState<'plans' | 'student'>('plans');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly');
+
+  // =========================================================================
   // 2. STATE DỮ LIỆU BẢN QUYỀN (LICENSE) TỪ BACKEND API
   // =========================================================================
   const [license, setLicense] = useState<LicenseResponse>({
     status: 'Trial',
     daysRemaining: 7,
     payCode: 'GH1000',
-    planName: 'FPT Student Developer Pro',
+    planName: 'Gói Dùng thử Trial (7 ngày)',
     amount: 10000,
     updatedAt: new Date().toLocaleTimeString('vi-VN'),
   });
@@ -218,11 +230,69 @@ export default function App() {
     previousStatusRef.current = license.status;
   }, [license.status, addToast]);
 
+  /**
+   * Xử lý chọn gói dịch vụ (Miễn phí 0đ, Gói tháng 10.000đ, Gói năm 90.000đ)
+   * Theo yêu cầu: Khi bấm vào gói tháng hoặc năm thì modal thanh toán VietQR nổi lên với background mờ
+   */
+  const handleSelectPlan = (plan: PlanType) => {
+    setSelectedPlan(plan);
+    if (plan === 'trial') {
+      setLicense((prev) => ({
+        ...prev,
+        status: 'Trial',
+        daysRemaining: 7,
+        planName: 'Gói Dùng thử Trial (7 ngày)',
+        amount: 0,
+        updatedAt: new Date().toLocaleTimeString('vi-VN'),
+      }));
+      setActiveTab('student');
+      addToast(
+        'success',
+        'Kích hoạt dùng thử thành công!',
+        'Bạn đã kích hoạt gói Trial 7 ngày miễn phí. Trải nghiệm ngay các tính năng FPT LMS Support!'
+      );
+    } else if (plan === 'monthly') {
+      setBankInfo((prev) => ({ ...prev, amount: 10000 }));
+      setLicense((prev) => ({
+        ...prev,
+        amount: 10000,
+        planName: 'Gói Tháng - FPT LMS Support Pro (30 ngày)',
+        updatedAt: new Date().toLocaleTimeString('vi-VN'),
+      }));
+      setIsPaymentModalOpen(true);
+      addToast(
+        'info',
+        'Đã mở cổng thanh toán VietQR (10.000 VNĐ)',
+        'Mã VietQR đã sẵn sàng. Phiên thanh toán an toàn kéo dài 10 phút!'
+      );
+    } else if (plan === 'yearly') {
+      setBankInfo((prev) => ({ ...prev, amount: 90000 }));
+      setLicense((prev) => ({
+        ...prev,
+        amount: 90000,
+        planName: 'Gói Năm - FPT LMS Support VIP (365 ngày)',
+        updatedAt: new Date().toLocaleTimeString('vi-VN'),
+      }));
+      setIsPaymentModalOpen(true);
+      addToast(
+        'info',
+        'Đã mở cổng thanh toán VietQR (90.000 VNĐ - Tiết kiệm 25%)',
+        'Mã VietQR 365 ngày đã sẵn sàng. Phiên thanh toán an toàn kéo dài 10 phút!'
+      );
+    }
+  };
+
   // Hàm mô phỏng gửi Webhook PayOS tới Backend để kiểm tra mở License
   const handleSimulatePayOS = async () => {
     setIsSimulatingPayOS(true);
     const webhookEndpoint = backendUrl.replace('/license', '/webhook/payos');
     const transferDescription = `MOMO.${bankInfo.accountName}.${license.payCode} chuyen tien gia han`;
+
+    const isYearly = (bankInfo.amount || 10000) >= 90000;
+    const daysToAdd = isYearly ? 365 : 30;
+    const planTitle = isYearly
+      ? 'Gói Năm - FPT LMS Support VIP (365 ngày)'
+      : 'Gói Tháng - FPT LMS Support Pro (30 ngày)';
 
     const payload = {
       code: '00',
@@ -257,13 +327,14 @@ export default function App() {
       setLicense(prev => ({
         ...prev,
         status: 'Active',
-        daysRemaining: 30,
+        planName: planTitle,
+        daysRemaining: daysToAdd,
         updatedAt: new Date().toLocaleTimeString('vi-VN')
       }));
       addToast(
         'success',
         'Kích hoạt thành công (Mô phỏng)!',
-        `Nội dung chuyển khoản chứa mã "${license.payCode}" hợp lệ -> Bản quyền đã chuyển sang ACTIVE (30 ngày)!`
+        `Nội dung chuyển khoản chứa mã "${license.payCode}" hợp lệ -> Bản quyền đã chuyển sang ACTIVE (${daysToAdd} ngày)!`
       );
     } finally {
       setIsSimulatingPayOS(false);
@@ -375,6 +446,8 @@ export default function App() {
    */
   const handleLogout = () => {
     setUser(null);
+    setIsPaymentModalOpen(false);
+    setActiveTab('plans');
     sessionStorage.removeItem('fpt_user');
     addToast('info', 'Đã đăng xuất', 'Bạn đã đăng xuất khỏi hệ thống thành công.');
   };
@@ -463,7 +536,7 @@ export default function App() {
           />
         ) : (
           // =========================================================================
-          // TRẠNG THÁI ĐÃ ĐĂNG NHẬP: Hiển thị Dashboard 2 Cột (Desktop chia cột, Mobile xếp chồng)
+          // TRẠNG THÁI ĐÃ ĐĂNG NHẬP: Hiển thị Tab chọn gói cước trước hoặc Dashboard
           // =========================================================================
           <div className="space-y-6">
             {/* Banner cảnh báo nếu không kết nối được backend localhost:8080 */}
@@ -496,35 +569,106 @@ export default function App() {
               </div>
             )}
 
-            {/* Dashboard 2 cột chính */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-              {/* CỘT TRÁI (Thông tin sinh viên, Trạng thái, Số ngày còn lại, Nút Tải lại) */}
-              <section className="lg:col-span-5 flex flex-col">
-                <StudentInfoCard
-                  user={user}
-                  license={license}
-                  isLoading={isLoadingLicense}
-                  onRefresh={() => fetchLicenseData(user.email, true)}
-                  onManualStatusChange={handleManualStatusChange}
-                />
-              </section>
+            {/* Thanh điều hướng 2 Trang độc lập theo yêu cầu:
+                1. Gói thành viên & Bảng giá
+                2. Thông tin sinh viên & Giấy phép */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('plans')}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'plans'
+                      ? 'bg-orange-600 text-white shadow-sm shadow-orange-600/30'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>1. Gói thành viên & Bảng giá</span>
+                </button>
 
-              {/* CỘT PHẢI (Thanh toán: Mã VietQR động nếu Trial/Expired, hoặc Đã kích hoạt nếu Active) */}
-              <section className="lg:col-span-7 flex flex-col">
-                <PaymentQRCard
-                  license={license}
-                  bankInfo={bankInfo}
-                  onOpenConfig={() => setIsConfigOpen(true)}
-                  onRefresh={() => fetchLicenseData(user.email, true)}
-                  onSimulatePayOS={handleSimulatePayOS}
-                  isSimulatingPayOS={isSimulatingPayOS}
-                  isPolling={!isLoadingLicense && license.status !== 'Active'}
-                />
-              </section>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('student')}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'student'
+                      ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/30'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>2. Thông tin sinh viên & Giấy phép</span>
+                </button>
+              </div>
+
+              {/* Quick Status Pill */}
+              <div className="flex items-center gap-2 pr-2">
+                <span className="text-[11px] text-slate-500 hidden sm:inline">Gói hiện tại:</span>
+                <span className="text-xs font-bold text-slate-800 font-mono bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                  {license.status} ({license.daysRemaining} ngày)
+                </span>
+                {license.status !== 'Active' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold border border-orange-200 cursor-pointer transition-colors"
+                  >
+                    <CreditCard className="w-3 h-3 text-orange-600" />
+                    <span>Mở thanh toán VietQR</span>
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* NỘI DUNG THEO TRANG ĐÃ ĐƯỢC TÁCH HOÀN TOÀN */}
+            {activeTab === 'plans' ? (
+              // TRANG 1: BẢNG GIÁ & CHỌN GÓI THÀNH VIÊN (Hiện ra đầu tiên theo yêu cầu)
+              <PlansSelectionView
+                currentStatus={license.status}
+                selectedPlan={selectedPlan}
+                onSelectPlan={handleSelectPlan}
+                onViewDashboard={() => setActiveTab('student')}
+                userEmail={user.email}
+              />
+            ) : (
+              // TRANG 2: THÔNG TIN SINH VIÊN & BẢN QUYỀN ĐỘC LẬP
+              <StudentInfoView
+                user={user}
+                license={license}
+                isLoading={isLoadingLicense}
+                onRefresh={() => fetchLicenseData(user.email, true)}
+                onUpgradeClick={() => setIsPaymentModalOpen(true)}
+                onManualStatusChange={handleManualStatusChange}
+              />
+            )}
           </div>
         )}
       </main>
+
+      {/* MODAL THANH TOÁN & KÍCH HOẠT BẢN QUYỀN (Nổi lên trên, background mờ, đếm ngược phiên 10 phút) */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        license={license}
+        bankInfo={bankInfo}
+        onOpenConfig={() => setIsConfigOpen(true)}
+        onRefresh={() => fetchLicenseData(user?.email || license.email || '', true)}
+        onSimulatePayOS={handleSimulatePayOS}
+        isSimulatingPayOS={isSimulatingPayOS}
+        isPolling={!isLoadingLicense && license.status !== 'Active'}
+        selectedPlanTitle={
+          bankInfo.amount === 90000
+            ? 'Gói Năm - FPT LMS Support VIP (365 ngày)'
+            : 'Gói Tháng - FPT LMS Support Pro (30 ngày)'
+        }
+        onChangePlan={() => {
+          setIsPaymentModalOpen(false);
+          setActiveTab('plans');
+        }}
+        onSessionReset={() => {
+          fetchLicenseData(user?.email || license.email || '', false);
+        }}
+      />
 
       {/* Modal Cấu hình Ngân hàng & Backend API */}
       <BankConfigModal
