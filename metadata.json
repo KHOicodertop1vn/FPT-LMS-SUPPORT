@@ -1,0 +1,6 @@
+{
+  "name": "FPT License Portal & VietQR Payment",
+  "description": "Cổng xác thực sinh viên FPT qua Google Identity Services, kiểm tra trạng thái giấy phép và thanh toán qua mã VietQR tự động.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
