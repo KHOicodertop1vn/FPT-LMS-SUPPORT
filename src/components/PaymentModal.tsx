@@ -37,6 +37,7 @@ interface PaymentModalProps {
   onOpenConfig: () => void;
   onRefresh: () => void;
   onSimulatePayOS?: () => void;
+  onOpenPayOSWebhook?: () => void;
   isSimulatingPayOS?: boolean;
   isPolling?: boolean;
   selectedPlanTitle?: string;
@@ -52,6 +53,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onOpenConfig,
   onRefresh,
   onSimulatePayOS,
+  onOpenPayOSWebhook,
   isSimulatingPayOS = false,
   isPolling = false,
   selectedPlanTitle,
@@ -62,14 +64,38 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [qrLoaded, setQrLoaded] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(SESSION_DURATION_SECONDS);
   const [isExpired, setIsExpired] = useState<boolean>(false);
+  const [sessionPayCode, setSessionPayCode] = useState<string>(license.payCode || 'GH1000');
+  const [sessionOrderCode, setSessionOrderCode] = useState<number | null>(null);
+
+  // Khởi tạo phiên thanh toán mới với mã giao dịch ngẫu nhiên duy nhất
+  const createNewSession = async () => {
+    try {
+      const res = await fetch('/api/payment/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: license.email,
+          amount: bankInfo.amount,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessionPayCode(data.payCode);
+        setSessionOrderCode(data.orderCode);
+      }
+    } catch (e) {
+      console.warn('Lỗi tạo session:', e);
+    }
+  };
 
   // Đếm ngược phiên thanh toán mỗi khi modal mở
   useEffect(() => {
     if (!isOpen) return;
 
-    // Reset lại timer mỗi khi mở modal mới
+    // Reset lại timer và sinh mã phiên mới mỗi khi mở modal
     setTimeLeft(SESSION_DURATION_SECONDS);
     setIsExpired(false);
+    createNewSession();
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -83,7 +109,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, [isOpen, bankInfo.amount, license.email]);
 
   // Format mm:ss
   const formatTime = (seconds: number) => {
@@ -96,6 +122,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     setTimeLeft(SESSION_DURATION_SECONDS);
     setIsExpired(false);
     setQrLoaded(false);
+    createNewSession();
     if (onSessionReset) {
       onSessionReset();
     }
@@ -103,7 +130,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const payCode = license.payCode || 'GH1000';
+  const payCode = sessionPayCode || license.payCode || 'GH1000';
   const vietQrImageUrl = buildVietQRUrl(
     bankInfo.bankId,
     bankInfo.accountNo,
@@ -372,31 +399,80 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 </div>
 
                 {/* Nội dung chuyển khoản (Bắt buộc) */}
-                <div className="flex items-center justify-between pt-0.5">
-                  <div className="space-y-0.5">
-                    <span className="text-orange-700 font-bold block">Nội dung chuyển khoản:</span>
-                    <span className="text-[10px] text-slate-400 block">
-                      (Bắt buộc để hệ thống nhận diện)
-                    </span>
+                <div className="pt-0.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-orange-700 font-bold block">Nội dung chuyển khoản:</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        (Bắt buộc để hệ thống nhận diện)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-black text-orange-700 bg-orange-100/80 px-2.5 py-1 rounded-lg border border-orange-300 text-sm">
+                        {payCode}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(payCode, 'payCode')}
+                        className="p-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-xs cursor-pointer"
+                        title="Sao chép mã chuyển khoản"
+                      >
+                        {copiedField === 'payCode' ? (
+                          <Check className="w-3.5 h-3.5" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-black text-orange-700 bg-orange-100/80 px-2.5 py-1 rounded-lg border border-orange-300 text-sm">
-                      {payCode}
+
+                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                    <span>
+                      Mã phiên thanh toán ngẫu nhiên duy nhất{' '}
+                      {sessionOrderCode ? `(#${sessionOrderCode})` : ''} - Tự động đối soát và chống trùng lặp đơn hàng 100%!
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(payCode, 'payCode')}
-                      className="p-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-xs cursor-pointer"
-                      title="Sao chép mã chuyển khoản"
-                    >
-                      {copiedField === 'payCode' ? (
-                        <Check className="w-3.5 h-3.5" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Nút Tra soát & Kích hoạt ngay khi đã chuyển khoản MBBank */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-extrabold flex items-center gap-1.5 text-emerald-900">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Bạn vừa chuyển khoản qua MBBank?
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-700 leading-tight">
+                  Nếu tiền đã trừ khỏi tài khoản MBBank, bấm nút bên dưới để máy chủ đối soát CSDL và kích hoạt License Active ngay:
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/license/manual-reconcile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          email: license.email,
+                          amount: bankInfo.amount || 10000,
+                          payCode: payCode,
+                        }),
+                      });
+                      if (res.ok) {
+                        onRefresh();
+                        onClose();
+                      }
+                    } catch (e) {
+                      console.warn(e);
+                    }
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>Xác nhận đã chuyển khoản MBBank (Kích hoạt ngay)</span>
+                </button>
               </div>
 
               {/* Nút giả lập Webhook PayOS để test nhanh */}
@@ -407,6 +483,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                       Kiểm thử kích hoạt tự động (PayOS):
                     </span>
+                    {onOpenPayOSWebhook && (
+                      <button
+                        type="button"
+                        onClick={onOpenPayOSWebhook}
+                        className="text-[11px] font-bold text-orange-700 hover:text-orange-900 underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <span>Cài đặt Webhook &rarr;</span>
+                      </button>
+                    )}
                   </div>
                   <button
                     type="button"

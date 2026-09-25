@@ -1,0 +1,53 @@
+{
+  "users": {
+    "buidangkhoi28@gmail.com": {
+      "email": "buidangkhoi28@gmail.com",
+      "name": "Bùi Đăng Khởi",
+      "createdAt": "2026-09-25T14:00:53.814Z",
+      "lastLoginAt": "2026-09-25T14:01:00.560Z"
+    }
+  },
+  "licenses": {
+    "buidangkhoi28@gmail.com": {
+      "id": "LIC-001",
+      "email": "buidangkhoi28@gmail.com",
+      "status": "Active",
+      "daysRemaining": 67,
+      "payCode": "GH1000",
+      "planName": "Gói Tháng - FPT LMS Support Pro (30 ngày)",
+      "amount": 10000,
+      "expiresAt": "2026-12-01T14:00:53.815Z",
+      "createdAt": "2026-09-25T14:00:53.815Z",
+      "updatedAt": "2026-09-25T14:14:28.398Z"
+    }
+  },
+  "payments": [
+    {
+      "id": "TXN-1790345668398-993",
+      "orderCode": 1790345668398,
+      "email": "buidangkhoi28@gmail.com",
+      "payCode": "GH1000",
+      "amount": 10000,
+      "description": "CK TIEN GH1000 QUA MB",
+      "gateway": "MBBank",
+      "reference": "SEPAY_MB123456",
+      "status": "SUCCESS",
+      "createdAt": "2026-09-25T14:14:28.398Z"
+    },
+    {
+      "id": "TXN-1790344865062",
+      "orderCode": 123456,
+      "email": "buidangkhoi28@gmail.com",
+      "payCode": "GH1000",
+      "amount": 10000,
+      "description": "MOMO.BUI DANG KHOI.GH1000 thanh toan goi thang",
+      "reference": "REF-1790344865062",
+      "status": "SUCCESS",
+      "createdAt": "2026-09-25T14:01:05.062Z"
+    }
+  ],
+  "processedReferences": {
+    "SEPAY_MB123456": true
+  },
+  "gatewayConfig": {}
+}

@@ -165,10 +165,39 @@ export const BankConfigModal: React.FC<BankConfigModalProps> = ({
           </div>
 
           {/* Backend API Endpoint */}
-          <div className="pt-2 border-t border-slate-100">
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Địa chỉ Backend API (Yêu cầu 2)
-            </label>
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                Địa chỉ Backend API (Yêu cầu 2)
+              </label>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setApiUrl('http://localhost:8080/api/v1/license')}
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-medium transition-all ${
+                    apiUrl.includes('8080')
+                      ? 'bg-orange-600 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                  title="Kết nối tới Spring Boot & SQL Server của bạn"
+                >
+                  🚀 Localhost 8080
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApiUrl('/api/v1/license')}
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-medium transition-all ${
+                    !apiUrl.includes('8080')
+                      ? 'bg-orange-600 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                  title="Dùng Backend máy chủ tích hợp sẵn"
+                >
+                  🌐 Cloud Server
+                </button>
+              </div>
+            </div>
+
             <input
               type="text"
               required
@@ -177,8 +206,8 @@ export const BankConfigModal: React.FC<BankConfigModalProps> = ({
               placeholder="http://localhost:8080/api/v1/license"
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
             />
-            <p className="text-[11px] text-slate-500 mt-1">
-              Hệ thống sẽ gọi <code className="font-mono text-slate-700 font-semibold">{apiUrl}?email=...</code> khi sinh viên đăng nhập.
+            <p className="text-[11px] text-slate-500">
+              Hệ thống sẽ gọi <code className="font-mono text-slate-700 font-semibold">{apiUrl}?email=...&name=...</code> khi sinh viên đăng nhập để lưu trực tiếp vào SQL Database của bạn.
             </p>
           </div>
 

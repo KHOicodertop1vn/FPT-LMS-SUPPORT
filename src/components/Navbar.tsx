@@ -4,15 +4,17 @@
  */
 
 import React from 'react';
-import { ShieldCheck, Settings, LogOut, GraduationCap, RefreshCw, Code2 } from 'lucide-react';
+import { ShieldCheck, Settings, LogOut, GraduationCap, RefreshCw, Code2, Zap } from 'lucide-react';
 import { UserProfile, LicenseStatus } from '../types';
 
 interface NavbarProps {
   user: UserProfile | null;
   status?: LicenseStatus;
+  backendUrl?: string;
   onLogout: () => void;
   onOpenConfig: () => void;
   onOpenBackendCode: () => void;
+  onOpenPayOSWebhook?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
 }
@@ -20,9 +22,11 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   user,
   status,
+  backendUrl,
   onLogout,
   onOpenConfig,
   onOpenBackendCode,
+  onOpenPayOSWebhook,
   onRefresh,
   isRefreshing,
 }) => {
@@ -51,6 +55,37 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right action items */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Badge trạng thái Backend URL */}
+          <button
+            onClick={onOpenConfig}
+            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-medium rounded-lg border transition-all ${
+              backendUrl?.includes('8080')
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+            title="Nhấn để đổi địa chỉ Backend API"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                backendUrl?.includes('8080') ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+              }`}
+            ></span>
+            <span>{backendUrl?.includes('8080') ? 'Spring Boot :8080' : 'Cloud Server'}</span>
+          </button>
+
+          {/* Nút cài đặt Webhook PayOS (MBBank) */}
+          {onOpenPayOSWebhook && (
+            <button
+              onClick={onOpenPayOSWebhook}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 transition-colors shadow-xs cursor-pointer"
+              title="Cài đặt và kiểm tra bắt chuyển khoản Webhook PayOS MBBank"
+            >
+              <Zap className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Webhook MBBank</span>
+              <span className="sm:hidden">PayOS</span>
+            </button>
+          )}
+
           {/* Backend Spring Boot Code viewer */}
           <button
             onClick={onOpenBackendCode}
@@ -58,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Xem toàn bộ mã nguồn Java Spring Boot 3.x & SQL Server"
           >
             <Code2 className="w-4 h-4 text-orange-600" />
-            <span className="hidden sm:inline">Code Java Spring Boot</span>
+            <span className="hidden sm:inline">Code Spring Boot</span>
           </button>
 
           {/* Quick config button */}

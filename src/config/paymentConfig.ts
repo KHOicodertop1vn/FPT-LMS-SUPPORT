@@ -14,21 +14,21 @@
 // =================================================================================================
 
 export const VIETQR_CONFIG = {
-  // 👉 1. MÃ NGÂN HÀNG / VÍ:
-  BANK_ID: 'MOMO', // Ví điện tử MoMo
+  // 👉 1. MÃ NGÂN HÀNG: Đã liên kết thành công với MBBank (Ngân hàng TMCP Quân Đội)
+  BANK_ID: 'MB',
 
-  // 👉 2. SỐ TÀI KHOẢN / SỐ ĐIỆN THOẠI VÍ:
-  ACCOUNT_NO: '0825566455', // Số điện thoại ví MoMo của bạn
+  // 👉 2. SỐ TÀI KHOẢN NGÂN HÀNG QUÂN ĐỘI (MB):
+  ACCOUNT_NO: '0825566455',
 
   // 👉 3. TÊN CHỦ TÀI KHOẢN VIẾT HOA KHÔNG DẤU:
-  ACCOUNT_NAME: 'BUI DANG KHOI', // Chủ tài khoản BÙI ĐĂNG KHỞI
+  ACCOUNT_NAME: 'BUI DANG KHOI',
 
   // 👉 4. SỐ TIỀN THANH TOÁN (VNĐ):
-  DEFAULT_AMOUNT: 10000, // 10,000 VNĐ theo yêu cầu
+  DEFAULT_AMOUNT: 10000,
 };
 
-// URL Backend API mặc định theo Yêu cầu 2:
-export const DEFAULT_BACKEND_API = 'http://localhost:8080/api/v1/license';
+// URL Backend API xử lý tra cứu bản quyền & Webhook PayOS
+export const DEFAULT_BACKEND_API = '/api/v1/license';
 
 // Google OAuth Client ID của bạn (Google Identity Services)
 export const DEFAULT_GOOGLE_CLIENT_ID = '232537070629-akec4s2vt55va8ukc8rn0spt9qhiohtc.apps.googleusercontent.com';

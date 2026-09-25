@@ -13,6 +13,7 @@ import { StudentInfoView } from './components/StudentInfoView';
 import { PlansSelectionView, PlanType } from './components/PlansSelectionView';
 import { BankConfigModal } from './components/BankConfigModal';
 import { BackendCodeModal } from './components/BackendCodeModal';
+import { PayOSWebhookModal } from './components/PayOSWebhookModal';
 import { AlertToast, ToastMessage } from './components/AlertToast';
 import { UserProfile, LicenseResponse, LicenseStatus, BankInfo } from './types';
 import { decodeJwtResponse, isFptEmail, isValidEmail } from './utils/jwt';
@@ -42,9 +43,11 @@ export default function App() {
   // 1.1 TÁCH RỜI TRANG & MODAL THANH TOÁN THEO YÊU CẦU
   // - activeTab: 'plans' (Gói thành viên) | 'student' (Thông tin sinh viên & Giấy phép)
   // - isPaymentModalOpen: modal thanh toán VietQR nổi lên với background mờ và đếm ngược phiên
+  // - isPayOSWebhookOpen: modal cấu hình và bắt chuyển khoản tự động PayOS MBBank
   // =========================================================================
   const [activeTab, setActiveTab] = useState<'plans' | 'student'>('plans');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isPayOSWebhookOpen, setIsPayOSWebhookOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('monthly');
 
   // =========================================================================
@@ -61,7 +64,10 @@ export default function App() {
 
   const [isLoadingLicense, setIsLoadingLicense] = useState(false);
   const [backendUrl, setBackendUrl] = useState<string>(() => {
-    return localStorage.getItem('backend_api_url') || DEFAULT_BACKEND_API;
+    const saved = localStorage.getItem('backend_api_url');
+    if (saved) return saved;
+    localStorage.setItem('backend_api_url', 'http://localhost:8080/api/v1/license');
+    return 'http://localhost:8080/api/v1/license';
   });
   const [backendError, setBackendError] = useState<string | null>(null);
 
@@ -125,13 +131,21 @@ export default function App() {
    * 4. Bắt lỗi kết nối nếu backend localhost:8080 chưa khởi động
    */
   const fetchLicenseData = useCallback(
-    async (email: string, showToast = true) => {
+    async (email: string, nameOrShowToast?: string | boolean, maybeShowToast = true) => {
       if (!email) return;
+
+      const name = typeof nameOrShowToast === 'string' ? nameOrShowToast : undefined;
+      const showToast = typeof nameOrShowToast === 'boolean' ? nameOrShowToast : maybeShowToast;
 
       setIsLoadingLicense(true);
       setBackendError(null);
 
-      const targetUrl = `${backendUrl}?email=${encodeURIComponent(email)}`;
+      const queryParams = new URLSearchParams({ email });
+      if (name) queryParams.set('name', name);
+
+      const targetUrl = backendUrl.includes('?')
+        ? `${backendUrl}&${queryParams.toString()}`
+        : `${backendUrl}?${queryParams.toString()}`;
       console.log(`[API Call] Đang gọi tới: ${targetUrl}`);
 
       try {
@@ -149,13 +163,25 @@ export default function App() {
         const data = await response.json();
         console.log('[API Call] Dữ liệu nhận từ Backend:', data);
 
+        let normalizedStatus: LicenseStatus = 'Trial';
+        if (data.status) {
+          const s = String(data.status).toUpperCase();
+          if (s === 'ACTIVE') normalizedStatus = 'Active';
+          else if (s === 'EXPIRED') normalizedStatus = 'Expired';
+          else normalizedStatus = 'Trial';
+        }
+
+        const days = typeof data.daysRemaining === 'number'
+          ? data.daysRemaining
+          : (typeof data.daysLeft === 'number' ? data.daysLeft : 7);
+
         // Cập nhật thông tin bản quyền từ response của Backend
         const formattedLicense: LicenseResponse = {
           email: data.email || email,
-          status: (data.status as LicenseStatus) || 'Trial',
-          daysRemaining: typeof data.daysRemaining === 'number' ? data.daysRemaining : 7,
+          status: normalizedStatus,
+          daysRemaining: days,
           payCode: data.payCode || 'GH1000',
-          planName: data.planName || 'FPT Student Developer Pro',
+          planName: data.planName || (normalizedStatus === 'Active' ? 'Gói Tháng - FPT LMS Support Pro' : 'Gói Dùng thử Trial (7 ngày)'),
           amount: data.amount || 10000,
           updatedAt: new Date().toLocaleTimeString('vi-VN'),
         };
@@ -163,17 +189,20 @@ export default function App() {
         setLicense(formattedLicense);
 
         if (showToast) {
+          const isLocal = backendUrl.includes('8080');
           addToast(
             'success',
-            'Đồng bộ thành công!',
-            `Đã cập nhật trạng thái bản quyền mới nhất từ máy chủ.`
+            isLocal ? '🟢 Đã lưu vào SQL Server (Localhost 8080)!' : 'Đồng bộ thành công!',
+            isLocal
+              ? `Tài khoản ${data.email} đã được lưu vào SQL với mã thanh toán ${data.payCode}!`
+              : `Đã cập nhật trạng thái bản quyền mới nhất từ máy chủ.`
           );
         }
       } catch (err: any) {
         console.warn('[API Call] Lỗi kết nối Backend:', err.message);
         setBackendError(err.message || 'Không thể kết nối đến máy chủ backend');
 
-        // Khi chạy demo hoặc backend localhost:8080 chưa được mở,
+        // Khi chạy demo hoặc backend localhost:8080 chưa được mở hoặc bị chặn CORS,
         // sinh payCode động dựa trên email sinh viên để mã VietQR luôn hoạt động
         const studentCodeMatch = email.match(/([a-zA-Z]{2}\d{5,6})/i);
         const dynamicPayCode = studentCodeMatch
@@ -188,10 +217,13 @@ export default function App() {
         }));
 
         if (showToast) {
+          const isLocal = backendUrl.includes('8080');
           addToast(
-            'info',
-            'Đang dùng chế độ mô phỏng',
-            `Không thể kết nối tới ${backendUrl}. Đang hiển thị dữ liệu và mã VietQR với mã thanh toán ${license.payCode}.`
+            'warning',
+            isLocal ? '⚠️ Chưa kết nối được localhost:8080' : 'Đang dùng chế độ mô phỏng',
+            isLocal
+              ? `Vui lòng đảm bảo Spring Boot đang chạy và đã thêm @CrossOrigin(origins = "*") trên LicenseController để trình duyệt cho phép kết nối.`
+              : `Không thể kết nối tới ${backendUrl}. Đang hiển thị dữ liệu mô phỏng.`
           );
         }
       } finally {
@@ -285,60 +317,53 @@ export default function App() {
   // Hàm mô phỏng gửi Webhook PayOS tới Backend để kiểm tra mở License
   const handleSimulatePayOS = async () => {
     setIsSimulatingPayOS(true);
-    const webhookEndpoint = backendUrl.replace('/license', '/webhook/payos');
-    const transferDescription = `MOMO.${bankInfo.accountName}.${license.payCode} chuyen tien gia han`;
-
     const isYearly = (bankInfo.amount || 10000) >= 90000;
     const daysToAdd = isYearly ? 365 : 30;
     const planTitle = isYearly
       ? 'Gói Năm - FPT LMS Support VIP (365 ngày)'
       : 'Gói Tháng - FPT LMS Support Pro (30 ngày)';
 
-    const payload = {
-      code: '00',
-      desc: 'success',
-      data: {
-        orderCode: Math.floor(100000 + Math.random() * 900000),
-        amount: bankInfo.amount || 10000,
-        description: transferDescription,
-        accountNumber: bankInfo.accountNo,
-        reference: `FT${Date.now()}`
-      }
-    };
-
     try {
-      const res = await fetch(webhookEndpoint, {
+      const res = await fetch('/api/payos/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          email: user?.email || license.email || 'buidangkhoi28@gmail.com',
+          amount: bankInfo.amount || 10000,
+          payCode: license.payCode,
+        }),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      addToast(
-        'success',
-        'Đã gửi Webhook PayOS thành công!',
-        `Backend đã nhận diện mã "${license.payCode}" trong nội dung và thực thi sp_HandlePayment.`
-      );
-      await fetchLicenseData(user?.email || license.email || '', false);
+      if (res.ok) {
+        addToast(
+          'success',
+          'MBBank: Đã nhận chuyển khoản thành công!',
+          `PayOS Webhook đã xử lý giao dịch. Bản quyền đã tự động nâng cấp sang ACTIVE (+${daysToAdd} ngày)!`
+        );
+        await fetchLicenseData(user?.email || license.email || '', false);
+        setActiveTab('student');
+        setIsSimulatingPayOS(false);
+        return;
+      }
     } catch (e: any) {
-      console.warn('Lỗi gọi Webhook local, kích hoạt mô phỏng:', e.message);
-      // Fallback mô phỏng nếu backend local chưa kết nối CORS:
-      setLicense(prev => ({
-        ...prev,
-        status: 'Active',
-        planName: planTitle,
-        daysRemaining: daysToAdd,
-        updatedAt: new Date().toLocaleTimeString('vi-VN')
-      }));
-      addToast(
-        'success',
-        'Kích hoạt thành công (Mô phỏng)!',
-        `Nội dung chuyển khoản chứa mã "${license.payCode}" hợp lệ -> Bản quyền đã chuyển sang ACTIVE (${daysToAdd} ngày)!`
-      );
-    } finally {
-      setIsSimulatingPayOS(false);
+      console.warn('Lỗi gọi Webhook local, kích hoạt fallback:', e.message);
     }
+
+    // Fallback nếu chạy độc lập
+    setLicense((prev) => ({
+      ...prev,
+      status: 'Active',
+      planName: planTitle,
+      daysRemaining: daysToAdd,
+      updatedAt: new Date().toLocaleTimeString('vi-VN'),
+    }));
+    addToast(
+      'success',
+      'Kích hoạt thành công (Mô phỏng PayOS)!',
+      `Nội dung chuyển khoản chứa mã "${license.payCode}" hợp lệ -> Bản quyền đã chuyển sang ACTIVE (${daysToAdd} ngày)!`
+    );
+    setIsSimulatingPayOS(false);
+    setActiveTab('student');
   };
 
   // =========================================================================
@@ -387,8 +412,8 @@ export default function App() {
           `Chào mừng ${profile.name} (${profile.email})${isFpt ? ' - Sinh viên FPT' : ''}!`
         );
 
-        // Bước 4: Gọi API backend lấy trạng thái bản quyền
-        fetchLicenseData(profile.email, false);
+        // Bước 4: Gọi API backend lấy trạng thái bản quyền và thêm vào database
+        fetchLicenseData(profile.email, profile.name, false);
       } catch (err: any) {
         console.error('[Google Sign-In Error]:', err);
         addToast(
@@ -427,7 +452,7 @@ export default function App() {
       `Đã đăng nhập với tài khoản: ${email}`
     );
 
-    fetchLicenseData(email, false);
+    fetchLicenseData(email, name, false);
   };
 
   /**
@@ -514,9 +539,11 @@ export default function App() {
       <Navbar
         user={user}
         status={license.status}
+        backendUrl={backendUrl}
         onLogout={handleLogout}
         onOpenConfig={() => setIsConfigOpen(true)}
         onOpenBackendCode={() => setIsBackendCodeOpen(true)}
+        onOpenPayOSWebhook={() => setIsPayOSWebhookOpen(true)}
         onRefresh={user ? () => fetchLicenseData(user.email, true) : undefined}
         isRefreshing={isLoadingLicense}
       />
@@ -654,6 +681,10 @@ export default function App() {
         onOpenConfig={() => setIsConfigOpen(true)}
         onRefresh={() => fetchLicenseData(user?.email || license.email || '', true)}
         onSimulatePayOS={handleSimulatePayOS}
+        onOpenPayOSWebhook={() => {
+          setIsPaymentModalOpen(false);
+          setIsPayOSWebhookOpen(true);
+        }}
         isSimulatingPayOS={isSimulatingPayOS}
         isPolling={!isLoadingLicense && license.status !== 'Active'}
         selectedPlanTitle={
@@ -668,6 +699,15 @@ export default function App() {
         onSessionReset={() => {
           fetchLicenseData(user?.email || license.email || '', false);
         }}
+      />
+
+      {/* Modal Cấu hình & Bắt Chuyển Khoản PayOS Webhook (MBBank 0825566455) */}
+      <PayOSWebhookModal
+        isOpen={isPayOSWebhookOpen}
+        onClose={() => setIsPayOSWebhookOpen(false)}
+        currentUserEmail={user?.email || license.email}
+        currentPayCode={license.payCode}
+        onWebhookSuccess={() => fetchLicenseData(user?.email || license.email || '', false)}
       />
 
       {/* Modal Cấu hình Ngân hàng & Backend API */}

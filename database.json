@@ -1,0 +1,91 @@
+{
+  "licenses": [
+    [
+      "buidangkhoi28@gmail.com",
+      {
+        "email": "buidangkhoi28@gmail.com",
+        "name": "BÙI ĐĂNG KHỞI",
+        "status": "Active",
+        "daysRemaining": 67,
+        "payCode": "GH1000",
+        "planName": "Gói Tháng - FPT LMS Support Pro (30 ngày)",
+        "amount": 10000,
+        "createdAt": "2026-09-25T15:28:51.199Z",
+        "updatedAt": "15:40:27",
+        "lastPaymentAt": "2026-09-25T15:40:27.957Z",
+        "lastOrderCode": "MB-827957"
+      }
+    ],
+    [
+      "sinhvien.fpt@fpt.edu.vn",
+      {
+        "email": "sinhvien.fpt@fpt.edu.vn",
+        "name": "Sinh Viên FPT",
+        "status": "Trial",
+        "daysRemaining": 7,
+        "payCode": "GH2026",
+        "planName": "Gói Dùng thử Trial (7 ngày)",
+        "amount": 10000,
+        "createdAt": "2026-09-25T15:28:51.205Z",
+        "updatedAt": "15:28:51"
+      }
+    ]
+  ],
+  "orders": [],
+  "transactions": [
+    {
+      "id": "TX-MBBANK-1790350827957",
+      "orderCode": "MB-827957",
+      "amount": 10000,
+      "description": "Xac nhan chuyen khoan MBBank 0825566455",
+      "accountNumber": "0825566455",
+      "payCodeMatched": "GH1000",
+      "userEmailMatched": "buidangkhoi28@gmail.com",
+      "status": "PROCESSED",
+      "receivedAt": "15:40:27",
+      "rawPayload": {
+        "manualReconcile": true,
+        "transferNote": "Xac nhan chuyen khoan MBBank 0825566455",
+        "amount": 10000
+      }
+    },
+    {
+      "id": "MOCK-1790350548983",
+      "orderCode": 456619,
+      "amount": 10000,
+      "description": "GH1000 thanh toan ban quyen FPT LMS Support",
+      "accountNumber": "0825566455",
+      "payCodeMatched": "GH1000",
+      "userEmailMatched": "buidangkhoi28@gmail.com",
+      "status": "PROCESSED",
+      "receivedAt": "15:35:48",
+      "rawPayload": {
+        "code": "00",
+        "desc": "success",
+        "data": {
+          "orderCode": 456619,
+          "amount": 10000,
+          "description": "GH1000 thanh toan ban quyen FPT LMS Support",
+          "accountNumber": "0825566455",
+          "reference": "FT1790350548982",
+          "transactionDateTime": "2026-09-25T15:35:48.982Z",
+          "currency": "VND",
+          "paymentLinkId": "pl_1790350548982",
+          "code": "00",
+          "desc": "Thành công"
+        },
+        "signature": "mock_signature_payos"
+      }
+    }
+  ],
+  "payosConfig": {
+    "clientId": "",
+    "apiKey": "",
+    "checksumKey": "",
+    "webhookUrl": "",
+    "channelName": "FPT LMS SUPPORT",
+    "bankName": "MBBank (Quân Đội)",
+    "accountNumber": "0825566455",
+    "accountName": "BUI DANG KHOI"
+  }
+}
